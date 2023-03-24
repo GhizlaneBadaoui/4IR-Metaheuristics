@@ -1,10 +1,10 @@
 package jobshop.solvers.neighborhood;
 
 import jobshop.encodings.ResourceOrder;
+import jobshop.encodings.Schedule;
+import jobshop.encodings.Task;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /** Implementation of the Nowicki and Smutnicki neighborhood.
@@ -126,7 +126,29 @@ public class Nowicki extends Neighborhood {
 
     /** Returns a list of all the blocks of the critical path. */
     List<Block> blocksOfCriticalPath(ResourceOrder order) {
-        throw new UnsupportedOperationException();
+        List<Block> blockList = new ArrayList<>();
+        Task[][] tasksByMachine = order.getTasksByMachine();
+        Map<Integer, List<Task>> taskMap = new HashMap<>();
+
+        Optional<Schedule> optSchedule = order.toSchedule();
+        Schedule schedule = optSchedule.get();
+        List<Task> tskOfCriticalPath = schedule.criticalPath();
+        for (Task tsk : tskOfCriticalPath) {
+            int machine = order.instance.machine(tsk);
+            if (taskMap.containsKey(machine)) {
+                List<Task> tasks = taskMap.get(order.instance.machine(tsk));
+                tasks.add(tsk);
+                taskMap.put(machine, tasks);
+            } else {
+                taskMap.put(machine, List.of(tsk));
+            }
+        }
+
+        for (int m=0; m<order.instance.numMachines; m++) {
+            // faut chercher les indices de taches de taskMap dans tasksByOrder
+        }
+
+        return blockList;
     }
 
     /** For a given block, return the possible swaps for the Nowicki and Smutnicki neighborhood */

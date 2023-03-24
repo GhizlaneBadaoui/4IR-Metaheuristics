@@ -24,6 +24,7 @@ public interface Solver {
             case "spt": return new GreedySolver(GreedySolver.Priority.SPT);
             // TODO: add new solvers
             case "lrpt": return new GreedySolver(GreedySolver.Priority.LRPT);
+            case "est_spt": return new GreedySolver(GreedySolver.Priority.EST_SPT);
             default: throw new RuntimeException("Unknown solver: "+ name);
         }
     }

@@ -14,6 +14,10 @@ public final class ResourceOrder extends Encoding {
     // executed on this machine in the same order
     final Task[][] tasksByMachine;
 
+    public Task[][] getTasksByMachine() {
+        return tasksByMachine;
+    }
+
     // for each machine, indicate how many tasks have been initialized
     final int[] nextFreeSlot;
 
