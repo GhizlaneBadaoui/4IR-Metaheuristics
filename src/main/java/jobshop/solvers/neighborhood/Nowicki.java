@@ -133,27 +133,40 @@ public class Nowicki extends Neighborhood {
         Optional<Schedule> optSchedule = order.toSchedule();
         Schedule schedule = optSchedule.get();
         List<Task> tskOfCriticalPath = schedule.criticalPath();
+
         for (Task tsk : tskOfCriticalPath) {
             int machine = order.instance.machine(tsk);
             if (taskMap.containsKey(machine)) {
-                List<Task> tasks = taskMap.get(order.instance.machine(tsk));
-                tasks.add(tsk);
-                taskMap.put(machine, tasks);
+                taskMap.get(order.instance.machine(tsk)).add(tsk);
             } else {
                 taskMap.put(machine, List.of(tsk));
             }
         }
 
         for (int m=0; m<order.instance.numMachines; m++) {
-            // faut chercher les indices de taches de taskMap dans tasksByOrder
+            if (taskMap.containsKey(m) && taskMap.get(m).size()>1) {
+                int firstTask = order.instance.numTasks;
+                int lastTask = 0;
+                for (int i=0; i<tasksByMachine[m].length; i++) {
+                    if (taskMap.containsValue(tasksByMachine[m][i])) {
+                        firstTask = Math.min(firstTask, i);
+                        lastTask = Math.max(lastTask, i);
+                    }
+                }
+                Block newBlock = new Block(m, firstTask, lastTask);
+                blockList.add(newBlock);
+            }
         }
-
         return blockList;
     }
 
     /** For a given block, return the possible swaps for the Nowicki and Smutnicki neighborhood */
     List<Swap> neighbors(Block block) {
-        throw new UnsupportedOperationException();
+        List<Swap> swapList = new ArrayList<>();
+
+        //Swap newSwap = new Swap(block.machine, );
+
+        return swapList;
     }
 
 }
