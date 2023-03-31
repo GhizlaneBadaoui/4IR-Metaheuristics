@@ -168,7 +168,79 @@ public class GreedySolver implements Solver {
 
     public ResourceOrder EST_LRPT (Instance instance) {
         ResourceOrder manualRO = new ResourceOrder(instance);
-        ////
+
+        int [] jobs = new int [instance.numJobs];
+        for (int job=0; job<instance.numJobs; job++) {
+            for(int task = 0 ; task < instance.numTasks ; task++) {
+                jobs[job] += instance.duration(new Task(job, task));
+            }
+        }
+
+        int[] machines = new int[instance.numMachines];
+        for (int i = 0; i < instance.numMachines; i++) {
+            machines[i] = 0;
+        }
+
+        HashMap<Integer,Task> possibleTasks = new HashMap<>();
+        for (int i = 0; i < instance.numJobs; i++) {
+            possibleTasks.put(i, new Task(i, 0));
+        }
+
+        while (!possibleTasks.isEmpty()) {
+            int[] est = new int[instance.numJobs];
+            for (int i: possibleTasks.keySet()) {
+                est[i] = Math.max(jobs[i], machines[instance.machine(possibleTasks.get(i))]);
+            }
+
+            // tasks of the smallest est value in estTab
+            int smallEst = Integer.MAX_VALUE;
+            List<Task> estTab = new ArrayList<>();
+            for (int i: possibleTasks.keySet()) {
+                if (smallEst > est[i]) {
+                    smallEst = est[i];
+                    estTab.clear();
+                    estTab.add(possibleTasks.get(i));
+                } else if (smallEst == est[i]) {
+                    estTab.add(possibleTasks.get(i));
+                }
+            }
+
+            // LRPT
+            int remainingTime = jobs[0]; // first job of estTab
+            int jobIndex = 0;
+            for (int job=1; job<jobs.length; job++) {
+                if (remainingTime<jobs[job]) {
+                    remainingTime = jobs[job];
+                    jobIndex = job;
+                }
+            }
+
+            int index = 0; //index of task to remove
+            for (Task tsk: possibleTasks.values()){
+                if (tsk.job == jobIndex) {
+                    index = tsk.task;
+                    break;
+                }
+            }
+            Task taskToRemove = new Task(jobIndex, index);
+
+            manualRO.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
+            possibleTasks.remove(jobIndex, taskToRemove);
+//            System.out.println("remove :" + taskToRemove);
+
+            // add next task of the job where a task has removed
+            if (taskToRemove.task + 1 < instance.numTasks) {
+                possibleTasks.put(jobIndex, new Task(jobIndex, taskToRemove.task+1));
+            }
+
+            // update machine's value and job's value in machines and jobs of the task removed
+            jobs[jobIndex] -= instance.duration(taskToRemove);
+            machines[instance.machine(taskToRemove)] += instance.duration(taskToRemove);
+//            for (int machine : machines) System.out.print("  machines :" + machine);
+//            for (int job : jobs) System.out.print("   jobs :" + job);
+//            System.out.println("possl :" + possibleTasks.toString());
+//            System.out.println("\n");
+        }
         return manualRO;
     }
 
@@ -177,22 +249,18 @@ public class GreedySolver implements Solver {
 
         ResourceOrder manualRO = new ResourceOrder(instance);
 
-        /* ********************** 3.1 Premières heuristiques : SPT ************************ */
         if (this.priority == Priority.SPT) {
             manualRO = SPT(instance);
         }
 
-        /* ********************** 3.1 Premières heuristiques : LRPT ************************ */
         if (this.priority == Priority.LRPT) {
             manualRO = LRPT(instance);
         }
 
-        /* ********************** 3.2 amélioration : EST-SPT ******************************* */
         if (this.priority == Priority.EST_SPT) {
             manualRO = EST_STP(instance);
         }
 
-        /* ********************** 3.2 amélioration : EST-LRPT ******************************* */
         if (this.priority == Priority.EST_LRPT) {
             manualRO = EST_LRPT(instance);
         }

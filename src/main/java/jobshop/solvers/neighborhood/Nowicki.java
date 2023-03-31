@@ -125,48 +125,72 @@ public class Nowicki extends Neighborhood {
     }
 
     /** Returns a list of all the blocks of the critical path. */
-    List<Block> blocksOfCriticalPath(ResourceOrder order) {
-        List<Block> blockList = new ArrayList<>();
-        Task[][] tasksByMachine = order.getTasksByMachine();
-        Map<Integer, List<Task>> taskMap = new HashMap<>();
-
+    public List<Block> blocksOfCriticalPath(ResourceOrder order) {
         Optional<Schedule> optSchedule = order.toSchedule();
         Schedule schedule = optSchedule.get();
         List<Task> tskOfCriticalPath = schedule.criticalPath();
+        List<Block> blockList = new ArrayList<>();
 
-        for (Task tsk : tskOfCriticalPath) {
-            int machine = order.instance.machine(tsk);
-            if (taskMap.containsKey(machine)) {
-                taskMap.get(order.instance.machine(tsk)).add(tsk);
-            } else {
-                taskMap.put(machine, List.of(tsk));
-            }
-        }
-
-        for (int m=0; m<order.instance.numMachines; m++) {
-            if (taskMap.containsKey(m) && taskMap.get(m).size()>1) {
-                int firstTask = order.instance.numTasks;
-                int lastTask = 0;
-                for (int i=0; i<tasksByMachine[m].length; i++) {
-                    if (taskMap.containsValue(tasksByMachine[m][i])) {
-                        firstTask = Math.min(firstTask, i);
-                        lastTask = Math.max(lastTask, i);
-                    }
+        int tsk = 0;
+        while (tsk != tskOfCriticalPath.size()){
+            for(int nextTsk=tsk+1; nextTsk<tskOfCriticalPath.size(); nextTsk++) {
+                if (order.instance.machine(tskOfCriticalPath.get(tsk)) != order.instance.machine(tskOfCriticalPath.get(nextTsk))) {
+                    blockList.add(new Block(order.instance.machine(tskOfCriticalPath.get(tsk)), tsk, nextTsk - 1));
+                    tsk = nextTsk;
                 }
-                Block newBlock = new Block(m, firstTask, lastTask);
-                blockList.add(newBlock);
             }
         }
+
+
+
+
+//        List<Block> blockList = new ArrayList<>();
+//        Task[][] tasksByMachine = order.getTasksByMachine();
+//        Map<Integer, List<Task>> taskMap = new HashMap<>();
+//
+//        Optional<Schedule> optSchedule = order.toSchedule();
+//        Schedule schedule = optSchedule.get();
+//        List<Task> tskOfCriticalPath = schedule.criticalPath();
+//
+//        for (Task tsk : tskOfCriticalPath) {
+//            int machine = order.instance.machine(tsk);
+//            if (taskMap.containsKey(machine)) {
+//                taskMap.get(order.instance.machine(tsk)).add(tsk);
+//            } else {
+//                taskMap.put(machine, List.of(tsk));
+//            }
+//        }
+//
+//        for (int m=0; m<order.instance.numMachines; m++) {
+//            if (taskMap.containsKey(m) && taskMap.get(m).size()>1) {
+//                int firstTask = order.instance.numTasks;
+//                int lastTask = 0;
+//                for (int i=0; i<tasksByMachine[m].length; i++) {
+//                    if (taskMap.containsValue(tasksByMachine[m][i])) {
+//                        firstTask = Math.min(firstTask, i);
+//                        lastTask = Math.max(lastTask, i);
+//                    }
+//                }
+//                Block newBlock = new Block(m, firstTask, lastTask);
+//                blockList.add(newBlock);
+//            }
+//        }
         return blockList;
     }
 
     /** For a given block, return the possible swaps for the Nowicki and Smutnicki neighborhood */
     List<Swap> neighbors(Block block) {
         List<Swap> swapList = new ArrayList<>();
-
-        //Swap newSwap = new Swap(block.machine, );
-
+        if (block.firstTask != block.lastTask) {  // block with more than one task
+            Swap newSwap1 = new Swap(block.machine, block.firstTask, block.firstTask+1);
+            Swap newSwap2 = new Swap(block.machine, block.lastTask-1, block.lastTask);
+            if (!newSwap1.equals(newSwap2)) {  // block with two tasks
+                swapList.add(newSwap1);
+            } else {                           // block with more than two tasks
+                swapList.add(newSwap1);
+                swapList.add(newSwap2);
+            }
+        }
         return swapList;
     }
-
 }

@@ -1,8 +1,12 @@
 package jobshop.solvers;
 
 import jobshop.Instance;
+import jobshop.encodings.ResourceOrder;
 import jobshop.encodings.Schedule;
+import jobshop.solvers.neighborhood.Neighborhood;
+import jobshop.solvers.neighborhood.Nowicki;
 
+import java.util.List;
 import java.util.Optional;
 
 /** Common interface that must implemented by all solvers. */
@@ -27,6 +31,7 @@ public interface Solver {
             case "lrpt": return new GreedySolver(GreedySolver.Priority.LRPT);
             case "est_spt": return new GreedySolver(GreedySolver.Priority.EST_SPT);
             case "est_lrpt": return new GreedySolver(GreedySolver.Priority.EST_LRPT);
+            case "descent": return new DescentSolver(new Nowicki(), new BasicSolver());
 
             default: throw new RuntimeException("Unknown solver: "+ name);
         }
