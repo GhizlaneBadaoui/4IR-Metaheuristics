@@ -23,91 +23,64 @@ public class GreedySolver implements Solver {
         this.priority = p;
     }
 
-    public ResourceOrder SPT (Instance instance) {
-        ResourceOrder manualRO = new ResourceOrder(instance);
-        List<Task> possibleTasks = new ArrayList<>();
-        for (int job=0; job<instance.numJobs; job++) {
-            for(int task = 0 ; task < instance.numTasks ; task++) {
-                possibleTasks.add(new Task(job, task));
+    public Task SPT (Instance instance, List<Task> possibleTasks) {
+        int small = instance.duration(possibleTasks.get(0));
+        Task taskToRemove = possibleTasks.get(0);
+        for (Task tsk : possibleTasks) {
+            if (small>instance.duration(tsk)) {
+                small = instance.duration(tsk);
+                taskToRemove = tsk;
             }
         }
-        while (!possibleTasks.isEmpty()) {
-            List<Task> firstTasks = new ArrayList<>();
-
-            for (int job=0; job<instance.numJobs; job++) {
-                for (int task=0; task<instance.numTasks; task++) {
-                    if (possibleTasks.contains(new Task(job, task))) {
-                        firstTasks.add(new Task(job, task));
-                        break;
-                    }
-                }
-            }
-
-            int smallDuration = instance.duration(firstTasks.get(0));
-            int taskIndex = 0;
-            for (Task tsk : firstTasks) {
-                if (smallDuration>instance.duration(tsk)) {
-                    smallDuration = instance.duration(tsk);
-                    taskIndex = firstTasks.indexOf(tsk);
-
-                }
-            }
-
-            manualRO.addTaskToMachine(instance.machine(firstTasks.get(taskIndex)), firstTasks.get(taskIndex));
-            possibleTasks.remove(firstTasks.get(taskIndex));
-
-        }
-        return manualRO;
+        return taskToRemove;
     }
 
-    public ResourceOrder LRPT (Instance instance) {
-        ResourceOrder manualRO = new ResourceOrder(instance);
-        List<Task> possibleTasks = new ArrayList<>();
-        for (int job=0; job<instance.numJobs; job++) {
-            for(int task = 0 ; task < instance.numTasks ; task++) {
-                possibleTasks.add(new Task(job, task));
+    public Task LRPT (Instance instance, List<Task> Tasks) {
+        int [] jobsDuration = new int [instance.numJobs];
+        for (Task tsk:Tasks) {
+            jobsDuration[tsk.job] += instance.duration(tsk);
+        }
+        int longDuration = jobsDuration[0];
+        int jobIndex = 0;
+        for (int job=1; job<jobsDuration.length; job++) {
+            if (longDuration<jobsDuration[job]) {
+                longDuration = jobsDuration[job];
+                jobIndex = job;
             }
         }
-
-        while (!possibleTasks.isEmpty()) {
-            int [] jobsDuration = new int [instance.numJobs];
-            for (Task tsk:possibleTasks) {
-                jobsDuration[tsk.job] += instance.duration(tsk);
-            }
-
-            int longDuration = jobsDuration[0];
-            int jobIndex = 0;
-            for (int job=1; job<jobsDuration.length; job++) {
-                if (longDuration<jobsDuration[job]) {
-                    longDuration = jobsDuration[job];
-                    jobIndex = job;
-                }
-            }
-
-            for (int tsk=0; tsk<instance.numTasks; tsk++){
-                if (possibleTasks.contains(new Task(jobIndex, tsk))) {
-                    Task taskToRemove = new Task(jobIndex, tsk);
-                    manualRO.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
-                    possibleTasks.remove(taskToRemove);
-                    break;
-                }
+        for (int tsk=0; tsk<instance.numTasks; tsk++){
+            if (Tasks.contains(new Task(jobIndex, tsk))) {
+                return new Task(jobIndex, tsk);
             }
         }
-        return manualRO;
+        return null;
     }
 
+    public List<Task> EST (Instance instance, int[] jobs, int[] machines, HashMap<Integer,Task> possibleTasks) {
+        int[] est = new int[instance.numJobs];
+        for (int i: possibleTasks.keySet()) {
+            est[i] = Math.max(jobs[i], machines[instance.machine(possibleTasks.get(i))]);
+            //System.out.println("**" + est[i]);
+        }
 
-    public ResourceOrder EST_STP (Instance instance) {
-        ResourceOrder manualRO = new ResourceOrder(instance);
+        // tasks of the smallest est value in estTab
+        int smallEst = Integer.MAX_VALUE;
+        List<Task> estTab = new ArrayList<>();
+        for (int i: possibleTasks.keySet()) {
+            if (smallEst > est[i]) {
+                smallEst = est[i];
+                estTab.clear();
+                estTab.add(possibleTasks.get(i));
+            } else if (smallEst == est[i]) {
+                estTab.add(possibleTasks.get(i));
+            }
+        }
+        return estTab;
+    }
+
+    public ResourceOrder EST_STP (Instance instance, ResourceOrder order) {
         int[] jobs = new int[instance.numJobs];
-        for (int i = 0; i < instance.numJobs; i++) {
-            jobs[i] = 0;
-        }
-
         int[] machines = new int[instance.numMachines];
-        for (int i = 0; i < instance.numMachines; i++) {
-            machines[i] = 0;
-        }
 
         HashMap<Integer,Task> possibleTasks = new HashMap<>();
         for (int i = 0; i < instance.numJobs; i++) {
@@ -115,71 +88,33 @@ public class GreedySolver implements Solver {
         }
 
         while (!possibleTasks.isEmpty()) {
-            int[] est = new int[instance.numJobs];
-            for (int i: possibleTasks.keySet()) {
-                est[i] = Math.max(jobs[i], machines[instance.machine(possibleTasks.get(i))]);
-            }
+            Task taskToRemove = SPT(instance, EST(instance, jobs, machines, possibleTasks));
 
-            // tasks of the smallest est value in estTab
-            int smallEst = Integer.MAX_VALUE;
-            List<Task> estTab = new ArrayList<>();
-            for (int i: possibleTasks.keySet()) {
-                if (smallEst > est[i]) {
-                    smallEst = est[i];
-                    estTab.clear();
-                    estTab.add(possibleTasks.get(i));
-                } else if (smallEst == est[i]) {
-                    estTab.add(possibleTasks.get(i));
-                }
-            }
-
-            // STP
-            int smallDuration = instance.duration(estTab.get(0)); // first task of estTab
-            int taskIndex = 0;
-            for (Task tsk : estTab) {
-                if (smallDuration > instance.duration(tsk)) {
-                    smallDuration = instance.duration(tsk);
-                    taskIndex = estTab.indexOf(tsk);
-                }
-            }
-
-            manualRO.addTaskToMachine(instance.machine(estTab.get(taskIndex)), estTab.get(taskIndex));
-            possibleTasks.remove(estTab.get(taskIndex).job, estTab.get(taskIndex));
+            order.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
+            possibleTasks.remove(taskToRemove.job, taskToRemove);
 
             // update job's value of tasks whom machine is the same of the task removed
             for (Task task : possibleTasks.values()) {
-                if (instance.machine(task) == instance.machine(estTab.get(taskIndex))) {
-                    jobs[task.job] = Math.max(instance.duration(estTab.get(taskIndex))+jobs[estTab.get(taskIndex).job], jobs[task.job]);
+                if (instance.machine(task) == instance.machine(taskToRemove)) {
+                    jobs[task.job] = Math.max(instance.duration(taskToRemove)+jobs[taskToRemove.job], jobs[task.job]);
                 }
             }
 
             // add next task of the job where a task has removed
-            if (estTab.get(taskIndex).task + 1 < instance.numTasks) {
-                possibleTasks.put(estTab.get(taskIndex).job, new Task(estTab.get(taskIndex).job, estTab.get(taskIndex).task+1));
+            if (taskToRemove.task + 1 < instance.numTasks) {
+                possibleTasks.put(taskToRemove.job, new Task(taskToRemove.job, taskToRemove.task+1));
             }
 
             // update machine's value and job's value in machines and jobs of the task removed
-            jobs[estTab.get(taskIndex).job] += instance.duration(estTab.get(taskIndex));
-            machines[instance.machine(estTab.get(taskIndex))] = Math.max(jobs[estTab.get(taskIndex).job], machines[instance.machine(estTab.get(taskIndex))] + instance.duration(estTab.get(taskIndex)));
+            jobs[taskToRemove.job] += instance.duration(taskToRemove);
+            machines[instance.machine(taskToRemove)] = Math.max(jobs[taskToRemove.job], machines[instance.machine(taskToRemove)] + instance.duration(taskToRemove));
         }
-        return manualRO;
+        return order;
     }
 
-
-    public ResourceOrder EST_LRPT (Instance instance) {
-        ResourceOrder manualRO = new ResourceOrder(instance);
-
+    public ResourceOrder EST_LRPT (Instance instance, ResourceOrder order) {
         int [] jobs = new int [instance.numJobs];
-        for (int job=0; job<instance.numJobs; job++) {
-            for(int task = 0 ; task < instance.numTasks ; task++) {
-                jobs[job] += instance.duration(new Task(job, task));
-            }
-        }
-
-        int[] machines = new int[instance.numMachines];
-        for (int i = 0; i < instance.numMachines; i++) {
-            machines[i] = 0;
-        }
+        int [] machines = new int[instance.numMachines];
 
         HashMap<Integer,Task> possibleTasks = new HashMap<>();
         for (int i = 0; i < instance.numJobs; i++) {
@@ -187,84 +122,71 @@ public class GreedySolver implements Solver {
         }
 
         while (!possibleTasks.isEmpty()) {
-            int[] est = new int[instance.numJobs];
-            for (int i: possibleTasks.keySet()) {
-                est[i] = Math.max(jobs[i], machines[instance.machine(possibleTasks.get(i))]);
+            List<Task> estTab = EST(instance, jobs, machines, possibleTasks);
+            List<Task> tasks = new ArrayList<>();
+            for (Task tsk : estTab) {
+                tasks.add(possibleTasks.get(tsk.job));
             }
+            Task taskToRemove = LRPT(instance, tasks);
 
-            // tasks of the smallest est value in estTab
-            int smallEst = Integer.MAX_VALUE;
-            List<Task> estTab = new ArrayList<>();
-            for (int i: possibleTasks.keySet()) {
-                if (smallEst > est[i]) {
-                    smallEst = est[i];
-                    estTab.clear();
-                    estTab.add(possibleTasks.get(i));
-                } else if (smallEst == est[i]) {
-                    estTab.add(possibleTasks.get(i));
-                }
-            }
-
-            // LRPT
-            int remainingTime = jobs[0]; // first job of estTab
-            int jobIndex = 0;
-            for (int job=1; job<jobs.length; job++) {
-                if (remainingTime<jobs[job]) {
-                    remainingTime = jobs[job];
-                    jobIndex = job;
-                }
-            }
-
-            int index = 0; //index of task to remove
-            for (Task tsk: possibleTasks.values()){
-                if (tsk.job == jobIndex) {
-                    index = tsk.task;
-                    break;
-                }
-            }
-            Task taskToRemove = new Task(jobIndex, index);
-
-            manualRO.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
-            possibleTasks.remove(jobIndex, taskToRemove);
-//            System.out.println("remove :" + taskToRemove);
+            order.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
+            possibleTasks.remove(taskToRemove.job, taskToRemove);
 
             // add next task of the job where a task has removed
             if (taskToRemove.task + 1 < instance.numTasks) {
-                possibleTasks.put(jobIndex, new Task(jobIndex, taskToRemove.task+1));
+                possibleTasks.put(taskToRemove.job, new Task(taskToRemove.job, taskToRemove.task+1));
             }
 
             // update machine's value and job's value in machines and jobs of the task removed
-            jobs[jobIndex] -= instance.duration(taskToRemove);
+            jobs[taskToRemove.job] += instance.duration(taskToRemove);
             machines[instance.machine(taskToRemove)] += instance.duration(taskToRemove);
-//            for (int machine : machines) System.out.print("  machines :" + machine);
-//            for (int job : jobs) System.out.print("   jobs :" + job);
-//            System.out.println("possl :" + possibleTasks.toString());
-//            System.out.println("\n");
         }
-        return manualRO;
+        return order;
     }
 
     @Override
     public Optional<Schedule> solve(Instance instance, long deadline) {
+        ResourceOrder order = new ResourceOrder(instance);
 
-        ResourceOrder manualRO = new ResourceOrder(instance);
+        /* ************* Heuristiques gloutonnes *************** */
+        List<Task> possibleTasks = new ArrayList<>();
+        switch (this.priority) {
+            case SPT:
+                for (int i = 0; i < instance.numJobs; i++) {
+                    possibleTasks.add(new Task(i, 0));
+                }
+                while (!possibleTasks.isEmpty()) {
+                    Task taskToRemove = SPT(instance, possibleTasks);
+                    possibleTasks.remove(taskToRemove);
+                    order.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
+                    if (taskToRemove.task + 1 < instance.numTasks) {
+                        possibleTasks.add(new Task(taskToRemove.job, taskToRemove.task + 1));
+                    }
+                }
+                break;
 
-        if (this.priority == Priority.SPT) {
-            manualRO = SPT(instance);
+            case LRPT:
+                for (int job = 0; job < instance.numJobs; job++) {
+                    for (int task = 0; task < instance.numTasks; task++) {
+                        possibleTasks.add(new Task(job, task));
+                    }
+                }
+                while (!possibleTasks.isEmpty()) {
+                    Task taskToRemove = LRPT(instance, possibleTasks);
+                    order.addTaskToMachine(instance.machine(taskToRemove), taskToRemove);
+                    possibleTasks.remove(taskToRemove);
+                }
+                break;
+
+            /* ************* Amélioration : EST *************** */
+            case EST_SPT:
+                order = EST_STP(instance, order);
+                break;
+
+            case EST_LRPT:
+                order = EST_LRPT(instance, order);
+                break;
         }
-
-        if (this.priority == Priority.LRPT) {
-            manualRO = LRPT(instance);
-        }
-
-        if (this.priority == Priority.EST_SPT) {
-            manualRO = EST_STP(instance);
-        }
-
-        if (this.priority == Priority.EST_LRPT) {
-            manualRO = EST_LRPT(instance);
-        }
-
-        return manualRO.toSchedule() ;
+        return order.toSchedule() ;
     }
 }

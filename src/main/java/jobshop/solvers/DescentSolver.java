@@ -30,30 +30,19 @@ public class DescentSolver implements Solver {
 
     @Override
     public Optional<Schedule> solve(Instance instance, long deadline) {
-        GreedySolver greedy = new GreedySolver(GreedySolver.Priority.SPT);
-        Optional<Schedule> result = greedy.solve(instance,1000);
-        System.out.println("list --");
-        Nowicki nowicki = new Nowicki();
-        List<Nowicki.Swap> swapList = nowicki.allSwaps(new ResourceOrder(result.get()));
-        System.out.println("list " + swapList);
-//        ResourceOrder newOrder = Nowicki.Swap.generateFrom();
+        Optional<Schedule> result = this.baseSolver.solve(instance, deadline);
 
+        ResourceOrder original = new ResourceOrder(result.get());
+        List<ResourceOrder> orderList = this.neighborhood.generateNeighbors(original);
 
-//
-//        Optional<Schedule> optSchedule = manualRO.toSchedule();
-//        Schedule schedule = optSchedule.get();
-//        optSchedule = basic.solve(instance, 100);
-//        List<Task> tskOfCriticalPath = optSchedule.criticalPath();
-//
-//        System.out.println(tskOfCriticalPath);
-
-//        Nowicki n = new Nowicki();
-//        List<Nowicki.Block> list = n.blocksOfCriticalPath(manualRO);
-//        System.out.println(list);
-
-
-
-        return Optional.of(result.get());
+        ResourceOrder bestOrder = orderList.get(0).copy();
+        //System.out.println("mks " +orderList.get(0).toSchedule().get().makespan() );
+        for(ResourceOrder ord : orderList) {
+            //System.out.println("mks " +ord.toSchedule().get().makespan() );
+            if (ord.toSchedule().get().makespan() < bestOrder.toSchedule().get().makespan()) {
+                bestOrder = ord.copy();
+            }
+        }
+        return bestOrder.toSchedule();
     }
-
 }

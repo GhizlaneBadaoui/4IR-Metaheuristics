@@ -14,8 +14,15 @@ public final class ResourceOrder extends Encoding {
     // executed on this machine in the same order
     final Task[][] tasksByMachine;
 
-    public Task[][] getTasksByMachine() {
-        return tasksByMachine;
+    public int getIndexOfTaskInMachine(Task task) {
+        //System.out.println("machines : "+ Arrays.deepToString(tasksByMachine));
+        int machine = instance.machine(task);
+        for(int i=0; i<tasksByMachine[machine].length; i++) {
+            if (tasksByMachine[machine][i].equals(task)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // for each machine, indicate how many tasks have been initialized
