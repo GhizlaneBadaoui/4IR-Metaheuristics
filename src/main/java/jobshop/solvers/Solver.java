@@ -1,15 +1,12 @@
 package jobshop.solvers;
 
 import jobshop.Instance;
-import jobshop.encodings.ResourceOrder;
 import jobshop.encodings.Schedule;
-import jobshop.solvers.neighborhood.Neighborhood;
 import jobshop.solvers.neighborhood.Nowicki;
 
-import java.util.List;
 import java.util.Optional;
 
-/** Common interface that must implemented by all solvers. */
+/** Common interface that must be implemented by all solvers. */
 public interface Solver {
 
     /** Look for a solution until blocked or a deadline has been met.
@@ -17,7 +14,7 @@ public interface Solver {
      * @param instance Jobshop instance that should be solved.
      * @param deadline Absolute time at which the solver should have returned a solution.
      *                 This time is in milliseconds and can be compared with System.currentTimeMilliseconds()
-     * @return An optional schedule that will be non empty if a solution was found.
+     * @return An optional schedule that will be non-empty if a solution was found.
      */
     Optional<Schedule> solve(Instance instance, long deadline);
 
@@ -26,13 +23,13 @@ public interface Solver {
         switch (name) {
             case "basic": return new BasicSolver();
             case "spt": return new GreedySolver(GreedySolver.Priority.SPT);
-
-            // TODO: add new solvers
             case "lrpt": return new GreedySolver(GreedySolver.Priority.LRPT);
             case "est_spt": return new GreedySolver(GreedySolver.Priority.EST_SPT);
             case "est_lrpt": return new GreedySolver(GreedySolver.Priority.EST_LRPT);
             case "descent_est_spt": return new DescentSolver(new Nowicki(), new GreedySolver(GreedySolver.Priority.EST_SPT));
             case "descent_est_lrpt": return new DescentSolver(new Nowicki(), new GreedySolver(GreedySolver.Priority.EST_LRPT));
+            case "taboo_est_spt": return new TabooSolver(new Nowicki(), new GreedySolver(GreedySolver.Priority.EST_SPT), 10, 3);
+            case "taboo_est_lrpt": return new TabooSolver(new Nowicki(), new GreedySolver(GreedySolver.Priority.EST_LRPT), 10, 3);
 
             default: throw new RuntimeException("Unknown solver: "+ name);
         }

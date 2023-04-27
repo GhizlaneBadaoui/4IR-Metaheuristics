@@ -4,7 +4,6 @@ import jobshop.Instance;
 import jobshop.solvers.BasicSolver;
 import jobshop.solvers.Solver;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.file.Paths;
@@ -30,7 +29,6 @@ public class ManualEncodingTests {
         this.reference = result.get();
     }
 
-    //@Ignore("Not ready yet")
     @Test
     public void testManualSchedule() {
         System.out.println("***** Reference schedule to reproduce ******");
@@ -39,14 +37,16 @@ public class ManualEncodingTests {
         System.out.println("GANTT: " + this.reference.asciiGantt());
 
         Schedule manualSchedule = new Schedule(instance);
-        // TODO: encode the same solution
-        Task task00 = new Task(0, 0);
-        Task task01 = new Task(0, 1);
-        Task task02 = new Task(0, 2);
 
-        Task task10 = new Task(1, 0);
-        Task task11 = new Task(1, 1);
-        Task task12 = new Task(1, 2);
+        /*
+         * La solution proposée pour l'instance aaa1 :
+         * tâche J0,0 commence à 0 et termine à 3 sur machine 0
+         * tâche J1,1 commence à 3 et termine à 5 sur machine 0
+         * tâche J1,0 commence à 0 et termine à 2 sur machine 1
+         * tâche J0,1 commence à 3 et termine à 6 sur machine 1
+         * tâche J0,2 commence à 6 et termine à 8 sur machine 2
+         * tâche J1,2 commence à 8 et termine à 12 sur machine 2
+         */
 
         manualSchedule.setStartTime(0,0, 0);
         manualSchedule.setStartTime(0,1, 3);
@@ -59,11 +59,20 @@ public class ManualEncodingTests {
         assert manualSchedule.equals(this.reference);
     }
 
-    //@Ignore("Not ready yet")
     @Test
     public void testManualResourceOrder() {
         ResourceOrder manualRO = new ResourceOrder(instance);
-        // TODO: encode the same solution
+
+        /*
+         * La solution proposée pour l'instance aaa1 dans le bon ordre de passage :
+         * tâche J0,0 commence à 0 et termine à 3 sur machine 0
+         * tâche J1,1 commence à 3 et termine à 5 sur machine 0
+         * tâche J1,0 commence à 0 et termine à 2 sur machine 1
+         * tâche J0,1 commence à 3 et termine à 6 sur machine 1
+         * tâche J0,2 commence à 6 et termine à 8 sur machine 2
+         * tâche J1,2 commence à 8 et termine à 12 sur machine 2
+         */
+
         manualRO.addTaskToMachine(0, new Task(0, 0));
         manualRO.addTaskToMachine(0, new Task(1, 1));
 
@@ -72,20 +81,31 @@ public class ManualEncodingTests {
 
         manualRO.addTaskToMachine(2, new Task(0, 2));
         manualRO.addTaskToMachine(2, new Task(1, 2));
-
 
         Optional<Schedule> optSchedule = manualRO.toSchedule();
         assert optSchedule.isPresent() : "The resource order could not be converted to a schedule (probably invalid)";
         Schedule schedule = optSchedule.get();
+        System.out.println("***** Solution non optimale de l'instance aaa1 ******");
+        System.out.println("MAKESPAN: " + schedule.makespan());
+        System.out.println("SCHEDULE: " + schedule);
+        System.out.println("GANTT: " + schedule.asciiGantt());
         assert schedule.equals(this.reference) : "The manual resource order encoding did not produce the same schedule";
     }
 
-    //@Ignore("Not ready yet")
     @Test
     public void testOptimalResourceOrder() {
+        /*
+         * La solution optimale pour l'instance aaa1 :
+         * tâche J0,0 commence à 0 et termine à 3 sur machine 0
+         * tâche J1,1 commence à 3 et termine à 5 sur machine 0
+         * tâche J1,0 commence à 0 et termine à 2 sur machine 1
+         * tâche J0,1 commence à 3 et termine à 6 sur machine 1
+         * tâche J1,2 commence à 5 et termine à 9 sur machine 2
+         * tâche J0,2 commence à 9 et termine à 11 sur machine 2
+         */
+
         ResourceOrder manualRO = new ResourceOrder(instance);
 
-        // TODO: encode the optimal solution
         manualRO.addTaskToMachine(0, new Task(0, 0));
         manualRO.addTaskToMachine(0, new Task(1, 1));
 
@@ -96,17 +116,24 @@ public class ManualEncodingTests {
         manualRO.addTaskToMachine(2, new Task(0, 2));
 
         Optional<Schedule> optSchedule = manualRO.toSchedule();
-        assert optSchedule.isPresent() : "The resource order cuold not be converted to a schedule (probably invalid)";
+        assert optSchedule.isPresent() : "The resource order could not be converted to a schedule (probably invalid)";
         Schedule schedule = optSchedule.get();
+        System.out.println("***** Solution optimale de l'instance aaa1 ******");
+        System.out.println("MAKESPAN: " + schedule.makespan());
+        System.out.println("SCHEDULE: " + schedule);
         System.out.println("GANTT: " + schedule.asciiGantt());
         assert schedule.makespan() == 11 : "The manual resource order encoding did not produce the optimal schedule";
     }
 
-    //@Ignore("Not ready yet")
     @Test
     public void testInvalidResourceOrder() {
         ResourceOrder manualRO = new ResourceOrder(instance);
-        // TODO: construct a complete but invalid solution in the resource order encoding
+
+        /*
+         * Un exemple d'une représentation de tâches invalide :
+         * on inverse dans la solution optimale l'ordre de passage des tâches J0,0 et J1,1 et des deux
+         * tâches J1,0 et J0,1.
+         */
         manualRO.addTaskToMachine(1, new Task(0, 1));
         manualRO.addTaskToMachine(0, new Task(1, 1));
 

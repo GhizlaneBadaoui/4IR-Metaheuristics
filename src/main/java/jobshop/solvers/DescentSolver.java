@@ -3,12 +3,8 @@ package jobshop.solvers;
 import jobshop.Instance;
 import jobshop.encodings.ResourceOrder;
 import jobshop.encodings.Schedule;
-import jobshop.encodings.Task;
 import jobshop.solvers.neighborhood.Neighborhood;
-import jobshop.solvers.neighborhood.Nowicki;
-import net.sourceforge.argparse4j.inf.Namespace;
 
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,19 +26,33 @@ public class DescentSolver implements Solver {
 
     @Override
     public Optional<Schedule> solve(Instance instance, long deadline) {
-        Optional<Schedule> result = this.baseSolver.solve(instance, deadline);
+        /* Générer une solution réalisable avec une heuristique gloutonne  */
+        Optional<Schedule> initSchedule = this.baseSolver.solve(instance, deadline);
+        assert initSchedule.isPresent();
+        ResourceOrder order = new ResourceOrder(initSchedule.get());
+        assert order.toSchedule().isPresent();
 
-        ResourceOrder original = new ResourceOrder(result.get());
-        List<ResourceOrder> orderList = this.neighborhood.generateNeighbors(original);
+        while (true) {
+            /* Générer la liste des ResourceOrders pour les différents voisinages */
+            List<ResourceOrder> orderList = this.neighborhood.generateNeighbors(order);
+            ResourceOrder bestOrder = orderList.get(0).copy();
+            assert bestOrder.toSchedule().isPresent();
 
-        ResourceOrder bestOrder = orderList.get(0).copy();
-        //System.out.println("mks " +orderList.get(0).toSchedule().get().makespan() );
-        for(ResourceOrder ord : orderList) {
-            //System.out.println("mks " +ord.toSchedule().get().makespan() );
-            if (ord.toSchedule().get().makespan() < bestOrder.toSchedule().get().makespan()) {
-                bestOrder = ord.copy();
+            /* Sélectionner la solution voisine améliorante dans orderList */
+            for(ResourceOrder ord : orderList) {
+                if (ord.toSchedule().isPresent() && ord.toSchedule().get().makespan() < bestOrder.toSchedule().get().makespan()) {
+                    bestOrder = ord.copy();
+                }
             }
+            /* S'arrêter lorsque la solution voisine n'est plus améliorante par rapport à la solution sélectionnée à l'itération antérieure */
+            if (bestOrder.toSchedule().get().makespan()<order.toSchedule().get().makespan()) {
+                order = bestOrder.copy();
+            } else {
+                break;
+            }
+//            System.out.println("Makespan : "+ order.toSchedule().get().makespan());
+            /* --> le makespan diminue au cours des itérations */
         }
-        return bestOrder.toSchedule();
+        return order.toSchedule();
     }
 }

@@ -71,7 +71,7 @@ public class Nowicki extends Neighborhood {
         public final int t2;
 
         /** Creates a new swap of two tasks. */
-        Swap(int machine, int t1, int t2) {
+        public Swap(int machine, int t1, int t2) {
             this.machine = machine;
             if (t1 < t2) {
                 this.t1 = t1;
@@ -88,9 +88,7 @@ public class Nowicki extends Neighborhood {
          */
         public ResourceOrder generateFrom(ResourceOrder original) {
             ResourceOrder newOrder = original.copy();
-            //System.out.println("original : "+ original.toString());
             newOrder.swapTasks(this.machine, this.t1, this.t2);
-            //System.out.println("new : "+ newOrder.toString());
             return newOrder;
         }
 
@@ -131,15 +129,19 @@ public class Nowicki extends Neighborhood {
     /** Returns a list of all the blocks of the critical path. */
     public List<Block> blocksOfCriticalPath(ResourceOrder order) {
         Optional<Schedule> optSchedule = order.toSchedule();
+        assert optSchedule.isPresent();
         Schedule schedule = optSchedule.get();
+
         List<Task> tskOfCriticalPath = schedule.criticalPath();
-        //System.out.println("path : "+tskOfCriticalPath);
         List<Block> blockList = new ArrayList<>();
 
+        /* Parcourir la liste des tâches du chemin critique et créer un nouveau block si on trouve une tâche
+        dont la machine est différente de la machine de la tâche qui la précède */
         int tsk = 0, nextTsk = tsk+1;
         while (nextTsk != tskOfCriticalPath.size()) {
             if (order.instance.machine(tskOfCriticalPath.get(tsk)) != order.instance.machine(tskOfCriticalPath.get(nextTsk))) {
-                if (tsk != nextTsk-1) { // if there is only one task in the block
+                /* Si le block contient qu'une seule tâche */
+                if (tsk != nextTsk-1) {
                     blockList.add(new Block(order.instance.machine(tskOfCriticalPath.get(tsk)),
                             order.getIndexOfTaskInMachine(tskOfCriticalPath.get(tsk)),
                             order.getIndexOfTaskInMachine(tskOfCriticalPath.get(nextTsk-1))));
@@ -148,31 +150,28 @@ public class Nowicki extends Neighborhood {
             }
             nextTsk++;
         }
+        /* Ajouter le dernier block */
         blockList.add(new Block(order.instance.machine(tskOfCriticalPath.get(tsk)),
                 order.getIndexOfTaskInMachine(tskOfCriticalPath.get(tsk)),
-                order.getIndexOfTaskInMachine(tskOfCriticalPath.get(nextTsk-1)))); // add the last block
+                order.getIndexOfTaskInMachine(tskOfCriticalPath.get(nextTsk-1))));
 
-//        for (Block block : blockList) {
-//            System.out.println("blocks : " + block.machine + " " + block.firstTask + " " + block.lastTask);
-//        }
         return blockList;
     }
 
     /** For a given block, return the possible swaps for the Nowicki and Smutnicki neighborhood */
     List<Swap> neighbors(Block block) {
         List<Swap> swapList = new ArrayList<>();
-        if (block.firstTask != block.lastTask) {  // block with more than one task
+        /* Vérifier si le block contient plus d'une tâche */
+        if (block.firstTask != block.lastTask) {
             Swap newSwap1 = new Swap(block.machine, block.firstTask, block.firstTask+1);
             Swap newSwap2 = new Swap(block.machine, block.lastTask-1, block.lastTask);
             swapList.add(newSwap1);
 
-            if (!newSwap1.equals(newSwap2)) { // block with more than two tasks
+            /* Si le block contient plus de deux tâches */
+            if (!newSwap1.equals(newSwap2)) {
                 swapList.add(newSwap2);
             }
         }
-//        for (Swap swap : swapList) {
-//            System.out.println("swap : " + swap.machine + " " + swap.t1 + " " + swap.t2);
-//        }
         return swapList;
     }
 }
